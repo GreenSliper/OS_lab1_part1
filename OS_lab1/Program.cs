@@ -87,7 +87,7 @@ namespace OS_lab1
 			}
 			driveFlexMenu.AddItems(menuItems);
 		}
-		[STAThread]
+		
 		static void Main(string[] args)
 		{
 			menu.Select();

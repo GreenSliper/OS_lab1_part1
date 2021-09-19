@@ -12,10 +12,6 @@ namespace OS_lab1
 {
 	class OverlappedFileCopier : FileManager
 	{
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        public delegate void LPOVERLAPPED_COMPLETION_ROUTINE(uint errorCode, 
-            uint numberOfBytesTransfered, ref NativeOverlapped overlapped);
-
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern uint SetFilePointer(IntPtr file, 
             int distanceToMove, IntPtr distanceToMoveHigh, EMoveMethod moveMethod);
@@ -24,9 +20,9 @@ namespace OS_lab1
         private static extern uint GetFileSize(IntPtr file,
             ref uint fileSizeHigh);
 
-        [DllImport("kernel32.dll")]
+        [DllImport("kernel32.dll", SetLastError = true)]
         public static extern int SleepEx(
-              UInt32 dwMilliseconds,
+              uint dwMilliseconds,
               bool bAlertable);
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -57,7 +53,13 @@ namespace OS_lab1
             callbackCounter++;
         }
 
-        private IOCompletionCallback callback;
+        private readonly IOCompletionCallback callback;
+
+        public unsafe OverlappedFileCopier()
+        {
+            //so the delegate won't be collected by GC
+            callback += OperationEndRoutine;
+        }
 
         [STAThread]
         private unsafe void ReadFileOverlapped(uint fileSize, uint blockSize, int operationsCount,
@@ -106,46 +108,53 @@ namespace OS_lab1
                 overlappeds[i].OffsetLow += (int)blockSize * operationsCount;
             callbackCounter = 0;
         }
-        [STAThread]
+
         private unsafe void CopyFileOverlapped(IntPtr sourceHandle, IntPtr targetHandle, uint blockSize, int operationsCount)
         {
             int srcSize = 0, curSize = 0; uint high = 0;
             srcSize = curSize = (int)GetFileSize(sourceHandle, ref high);
+
             byte[][] buffer = new byte[operationsCount][];
             var pins = new GCHandle[operationsCount];
+
             for (int i = 0; i < buffer.Length; i++)
             {
                 buffer[i] = new byte[(int)blockSize];
+                //make sure that GC won't move the buffers in memory
                 pins[i] = GCHandle.Alloc(buffer[i], GCHandleType.Pinned);
             }
-            NativeOverlapped[] over_1 = new NativeOverlapped[operationsCount];
-            NativeOverlapped[] over_2 = new NativeOverlapped[operationsCount];
-
-            for (int i = 0; i < operationsCount; i++)
+            try
             {
-                over_1[i] = new NativeOverlapped();
-                over_2[i] = new NativeOverlapped();
-                over_1[i].OffsetLow = over_2[i].OffsetLow = i * (int)blockSize;
+                NativeOverlapped[] over_1 = new NativeOverlapped[operationsCount];
+                NativeOverlapped[] over_2 = new NativeOverlapped[operationsCount];
+
+                for (int i = 0; i < operationsCount; i++)
+                {
+                    over_1[i] = new NativeOverlapped();
+                    over_2[i] = new NativeOverlapped();
+                    over_1[i].OffsetLow = over_2[i].OffsetLow = i * (int)blockSize;
+                    over_1[i].OffsetHigh = over_2[i].OffsetHigh = i * (int)high;
+                }
+                //main block
+                do
+                {
+                    ReadFileOverlapped((uint)srcSize, blockSize, operationsCount, over_1, buffer, sourceHandle);
+                    WriteFileOverlapped((uint)srcSize, blockSize, operationsCount, over_2, buffer, targetHandle);
+                    curSize -= (int)(blockSize * operationsCount);
+                } while (curSize > 0);
+                //finish operation
+                SetFilePointer(targetHandle, srcSize, IntPtr.Zero, EMoveMethod.Begin);
+                SetEndOfFile(targetHandle);
             }
-
-            do
+            finally //free pinned memory
             {
-                ReadFileOverlapped((uint)srcSize, blockSize, operationsCount, over_1, buffer, sourceHandle);
-                WriteFileOverlapped((uint)srcSize, blockSize, operationsCount, over_2, buffer, targetHandle);
-                curSize -= (int)(blockSize * operationsCount);
-            } while (curSize > 0);
-
-            SetFilePointer(targetHandle, (int)srcSize, IntPtr.Zero, EMoveMethod.Begin);
-            SetEndOfFile(targetHandle);
-
-            for (int i = 0; i < buffer.Length; i++)
-                pins[i].Free();
+                for (int i = 0; i < buffer.Length; i++)
+                    pins[i].Free();
+            }
         }
 
-        [STAThread]
         public unsafe void Copy()
         {
-            callback += OperationEndRoutine;
             string sourcePath, targetPath;
             if (!GetSourceTargetPaths(out sourcePath, out targetPath, true))
                 return;
@@ -170,12 +179,18 @@ namespace OS_lab1
             }
             uint blockSize = Extensions.GetUintFromConsole("block size", false) * 4096;
             int operations = (int)Extensions.GetUintFromConsole("operations count", false);
-            uint start = timeGetTime();
-            CopyFileOverlapped(sourceHandle, targetHandle, blockSize, operations);
-            uint end = timeGetTime();
-            CloseHandle(sourceHandle);
-            CloseHandle(targetHandle);
-            Console.WriteLine($"File copied successfully. Copy time: {end-start} milliseconds");
+            try
+            {
+                uint start = timeGetTime();
+                CopyFileOverlapped(sourceHandle, targetHandle, blockSize, operations);
+                uint end = timeGetTime();
+                Console.WriteLine($"File copied successfully. Copy time: {end - start} milliseconds");
+            }
+            finally //dispose descriptors
+            {
+                CloseHandle(sourceHandle);
+                CloseHandle(targetHandle);
+            }
         }
     }
 }

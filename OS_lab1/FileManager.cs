@@ -99,7 +99,7 @@ namespace OS_lab1
 					uint lastErr = GetLastError();
 					if (!checkOverwrite)
 						Console.WriteLine($"File copy failed. Error code: {lastErr}");
-					else if (lastErr == 80 && YNmessageBox.Show("File already exists. Overwrite?"))
+					else if (lastErr == 80 || lastErr == 183 && YNmessageBox.Show("File already exists. Overwrite?"))
 					{
 						if (CopyFile(source, target, false))
 							Console.WriteLine("File overwritten successfully");
@@ -131,7 +131,7 @@ namespace OS_lab1
 					else
 					{
 						uint lastErr = GetLastError();
-						if (lastErr == 80 && YNmessageBox.Show("File already exists. Overwrite?"))
+						if (lastErr == 80 || lastErr == 183 && YNmessageBox.Show("File already exists. Overwrite?"))
 							if (MoveFileEx(source, target, (uint)MoveFlags.MOVEFILE_REPLACE_EXISTING
 								| (uint)MoveFlags.MOVEFILE_COPY_ALLOWED))
 								Console.WriteLine("File replaced successfully");
