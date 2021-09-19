@@ -13,46 +13,46 @@ namespace OS_lab1
 	class FileManager
 	{
 		[DllImport("kernel32.dll")]
-		static extern uint GetLastError();
+		protected static extern uint GetLastError();
 
 		[DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-		static extern bool CopyFile([MarshalAs(UnmanagedType.LPUTF8Str)] string fromPathName,
+		protected static extern bool CopyFile([MarshalAs(UnmanagedType.LPUTF8Str)] string fromPathName,
 									[MarshalAs(UnmanagedType.LPUTF8Str)] string toPathName,
 									bool failIfExists);
 
 		[DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-		static extern bool MoveFile([MarshalAs(UnmanagedType.LPUTF8Str)] string fromPathName,
+		protected static extern bool MoveFile([MarshalAs(UnmanagedType.LPUTF8Str)] string fromPathName,
 									[MarshalAs(UnmanagedType.LPUTF8Str)] string toPathName);
 
 		[DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-		static extern bool MoveFileEx([MarshalAs(UnmanagedType.LPUTF8Str)] string fromPathName,
+		protected static extern bool MoveFileEx([MarshalAs(UnmanagedType.LPUTF8Str)] string fromPathName,
 									  [MarshalAs(UnmanagedType.LPUTF8Str)] string toPathName, uint flags);
 
 		[DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-		static extern IntPtr CreateFile([MarshalAs(UnmanagedType.LPUTF8Str)] string fileName,
+		protected static extern IntPtr CreateFile([MarshalAs(UnmanagedType.LPUTF8Str)] string fileName,
 									  uint desiredAccess, uint shareMode, Winapi.SECURITY_ATTRIBUTES securityAttributes,
 									  uint creationDisposition, uint flagsAndAttributes, IntPtr templateFile);
 
 		[DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-		static extern bool CloseHandle(IntPtr hObject);
+		protected static extern bool CloseHandle(IntPtr hObject);
 
 		[DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-		static extern uint GetFileAttributes([MarshalAs(UnmanagedType.LPUTF8Str)] string fileName);
+		protected static extern uint GetFileAttributes([MarshalAs(UnmanagedType.LPUTF8Str)] string fileName);
 
 		[DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-		static extern bool SetFileAttributes([MarshalAs(UnmanagedType.LPUTF8Str)] string fileName, uint fileAttributes);
+		protected static extern bool SetFileAttributes([MarshalAs(UnmanagedType.LPUTF8Str)] string fileName, uint fileAttributes);
 
 		[DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-		static extern bool GetFileInformationByHandle(IntPtr fileHandle, BY_HANDLE_FILE_INFORMATION fileInfo);
+		protected static extern bool GetFileInformationByHandle(IntPtr fileHandle, BY_HANDLE_FILE_INFORMATION fileInfo);
 
 		[DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-		static extern bool GetFileTime(IntPtr fileHandle, out FILETIME creationTime, 
+		protected static extern bool GetFileTime(IntPtr fileHandle, out FILETIME creationTime, 
 									   out FILETIME lastAccessTime, out FILETIME lastWriteTime);
 
 		[DllImport("kernel32.dll", CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
-		static extern bool SetFileTime(IntPtr fileHandle, in FILETIME creationTime,
+		protected static extern bool SetFileTime(IntPtr fileHandle, in FILETIME creationTime,
 							   in FILETIME lastAccessTime, in FILETIME lastWriteTime);
-		bool GetFilePath(out string targetPath, bool allowInterrupt, string header = "Select target file full path + name ")
+		protected bool GetFilePath(out string targetPath, bool allowInterrupt, string header = "Select target file full path + name ")
 		{
 			Console.WriteLine(header + (allowInterrupt ?
 							  "(press enter without input to abort):" : ":"));
@@ -61,7 +61,8 @@ namespace OS_lab1
 				return false;
 			return true;
 		}
-		bool GetSourceTargetPaths(out string sourcePath, out string targetPath, bool allowInterrupt, bool checkSourceExists = true)
+
+		protected bool GetSourceTargetPaths(out string sourcePath, out string targetPath, bool allowInterrupt, bool checkSourceExists = true)
 		{
 			sourcePath = "";
 			targetPath = "";
@@ -155,7 +156,7 @@ namespace OS_lab1
 				Console.WriteLine("Operation aborted");
 		}
 
-		readonly static IntPtr INVALID_HANDLE_VALUE = (IntPtr)(-1);
+		protected readonly static IntPtr INVALID_HANDLE_VALUE = (IntPtr)(-1);
 		public void CreateFile(bool allowInterrupt)
 		{
 			string targetPath = "";

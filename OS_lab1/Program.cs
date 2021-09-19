@@ -9,6 +9,7 @@ namespace OS_lab1
 		static DriveManager driveManager = new DriveManager();
 		static DirectoryManager directoryManager = new DirectoryManager();
 		static FileManager fileManager = new FileManager();
+		static OverlappedFileCopier overlappedFileCopier = new OverlappedFileCopier();
 		static IYNmessageBox YNmessageBox = new YNMessageBox();
 
 		static FlexMenu driveFlexMenu = new FlexMenu("Get hard drive details", new IMenuItem[] { });
@@ -44,6 +45,7 @@ namespace OS_lab1
 				new Menu("File management", new IMenuItem[]
 					{
 						new MenuItem("Copy file", () => fileManager.CopyFile(true, YNmessageBox)),
+						new MenuItem("Copy file overlapped", overlappedFileCopier.Copy),
 						new MenuItem("Move file", () => fileManager.MoveFile(true, YNmessageBox)),
 						new MenuItem("Create file", () => fileManager.CreateFile(true)),
 						fileAttributeManagementMenu
@@ -68,7 +70,7 @@ namespace OS_lab1
 			var res = new IMenuItem[values.Length];
 			for (int i = 0; i < values.Length; i++)
 			{
-				int j = i;
+				int j = i; //so the delegate wont corrupt
 				res[i] = new MenuItem(values[i].ToString(), ()=>fileManager.SetFileAttributes(
 					fileAttributeManagementMenu.Data, values[j]));
 			}
@@ -85,6 +87,7 @@ namespace OS_lab1
 			}
 			driveFlexMenu.AddItems(menuItems);
 		}
+		[STAThread]
 		static void Main(string[] args)
 		{
 			menu.Select();

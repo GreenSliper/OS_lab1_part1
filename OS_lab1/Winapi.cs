@@ -352,5 +352,12 @@ namespace OS_lab1
 			FILE_VOLUME_QUOTAS = 0x00000020,
 			FILE_SUPPORTS_BLOCK_REFCOUNTING = 0x08000000
 		}
+
+		public enum EMoveMethod : uint
+		{
+			Begin = 0,
+			Current = 1,
+			End = 2
+		}
 	}
 }

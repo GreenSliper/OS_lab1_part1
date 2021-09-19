@@ -66,5 +66,20 @@ namespace OS_lab1
 			}
 			return new FILETIME();
 		}
+
+		public static uint GetUintFromConsole(string name, bool canBeZero = true)
+		{
+			Console.WriteLine($"Input {name}:");
+			uint val = 0;
+			do
+			{
+				if (!uint.TryParse(Console.ReadLine(), out val) && (canBeZero || val > 0))
+				{
+					Console.WriteLine($"{name} should be a{(canBeZero? "n" : " positive")} integer!");
+					val = 0;
+				}
+			} while (val == 0);
+			return val;
+		}
 	}
 }
