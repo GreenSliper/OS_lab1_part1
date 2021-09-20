@@ -212,7 +212,7 @@ namespace OS_lab1
 		{
 			handle = CreateFile(targetPath, (uint)DesiredAccess.GENERIC_WRITE | (uint)DesiredAccess.GENERIC_READ,
 						(uint)ShareMode.FILE_SHARE_READ | (uint)ShareMode.FILE_SHARE_WRITE | (uint)ShareMode.FILE_SHARE_DELETE,
-						null, (uint)CreationDisposition.CREATE_ALWAYS, (uint)Winapi.FileAttributes.FILE_ATTRIBUTE_NORMAL,
+						null, (uint)CreationDisposition.OPEN_EXISTING, (uint)Winapi.FileAttributes.FILE_ATTRIBUTE_NORMAL,
 						IntPtr.Zero);
 			if (handle == INVALID_HANDLE_VALUE)
 			{
