@@ -14,8 +14,8 @@ namespace OS_lab1
 
 		static FlexMenu driveFlexMenu = new FlexMenu("Get hard drive details", new IMenuItem[] { });
 
-		static MenuWithDataRequest<String> fileAttributeManagementMenu =
-				new MenuWithDataRequest<String>("File attribute management", 
+		static MenuWithDataRequest<string> fileAttributeManagementMenu =
+				new MenuWithDataRequest<string>("File attribute management", 
 					new IMenuItem[]{
 						new MenuItem("Get file attributes", 
 							()=>fileManager.PrintFileAttributes(fileAttributeManagementMenu.Data)),
@@ -25,7 +25,7 @@ namespace OS_lab1
 							()=>fileManager.PrintFileTimeAttributes(fileAttributeManagementMenu.Data)),
 						new MenuItem("Set file time attributes", 
 							()=>fileManager.SetFileTimeAttributes(fileAttributeManagementMenu.Data)),
-						new MenuWithDataRequest<String>("Set file attributes",
+						new MenuWithDataRequest<string>("Set file attributes",
 							CreateSetAttributesMenu(), ()=>fileAttributeManagementMenu.Data)
 					},
 					() => SelectFile());

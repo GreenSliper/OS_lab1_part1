@@ -14,10 +14,15 @@ namespace OS_lab1
 	{
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern uint SetFilePointer(IntPtr file, 
-            int distanceToMove, IntPtr distanceToMoveHigh, EMoveMethod moveMethod);
-        
+            int distanceToMove, int distanceToMoveHigh, EMoveMethod moveMethod);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool SetFilePointerEx(
+             IntPtr hFile, long liDistanceToMove,
+             out long lpNewFilePointer, EMoveMethod dwMoveMethod);
+
         [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern uint GetFileSize(IntPtr file,
+        private static extern ulong GetFileSize(IntPtr file,
             ref uint fileSizeHigh);
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -61,8 +66,20 @@ namespace OS_lab1
             callback += OperationEndRoutine;
         }
 
+        void IncreaseOverlapped(ref NativeOverlapped over, ulong increase)
+        {
+            if (over.OffsetLow < 0)
+            {
+                over.OffsetLow += (int)increase;
+                if(over.OffsetLow > 0)
+                    over.OffsetHigh += 1;
+                return;
+            }
+            over.OffsetLow = (int)((ulong)over.OffsetLow + increase);
+        }
+
         [STAThread]
-        private unsafe void ReadFileOverlapped(uint fileSize, uint blockSize, int operationsCount,
+        private unsafe void ReadFileOverlapped(long fileSize, uint blockSize, int operationsCount,
             NativeOverlapped[] overlappeds, byte[][] buffer, IntPtr fileHandle)
         {
             //read via multiple streams
@@ -78,15 +95,20 @@ namespace OS_lab1
             }
             //wait for all operations to end
             while (callbackCounter < operationsStarted)
-                SleepEx(uint.MaxValue, true);
+                SleepEx(10000/*uint.MaxValue*/, true);
+            uint x;
+            if ((x = GetLastError()) != 0)
+				Console.WriteLine(x);
             //move to next memory block
             for (int i = 0; i < operationsCount; i++)
-                overlappeds[i].OffsetLow += (int)blockSize * operationsCount;
+            {
+                IncreaseOverlapped(ref overlappeds[i], (ulong)blockSize * (ulong)operationsCount);
+            }
             callbackCounter = 0;
         }
 
         [STAThread]
-        private unsafe void WriteFileOverlapped(uint fileSize, uint blockSize, int operationsCount,
+        private unsafe void WriteFileOverlapped(long fileSize, uint blockSize, int operationsCount,
             NativeOverlapped[] overlappeds, byte[][] buffer, IntPtr fileHandle)
         {
             //write via multiple streams
@@ -105,14 +127,17 @@ namespace OS_lab1
                 SleepEx(uint.MaxValue, true);
             //move to next memory block
             for (int i = 0; i < operationsCount; i++)
-                overlappeds[i].OffsetLow += (int)blockSize * operationsCount;
+            {
+                IncreaseOverlapped(ref overlappeds[i], (ulong)blockSize * (ulong)operationsCount);
+            }
             callbackCounter = 0;
         }
 
         private unsafe void CopyFileOverlapped(IntPtr sourceHandle, IntPtr targetHandle, uint blockSize, int operationsCount)
         {
-            int srcSize = 0, curSize = 0; uint high = 0;
-            srcSize = curSize = (int)GetFileSize(sourceHandle, ref high);
+            long srcSize = 0, curSize = 0;
+            uint high = 0;
+            srcSize = curSize = (long)GetFileSize(sourceHandle, ref high);
 
             byte[][] buffer = new byte[operationsCount][];
             var pins = new GCHandle[operationsCount];
@@ -133,17 +158,18 @@ namespace OS_lab1
                     over_1[i] = new NativeOverlapped();
                     over_2[i] = new NativeOverlapped();
                     over_1[i].OffsetLow = over_2[i].OffsetLow = i * (int)blockSize;
-                    over_1[i].OffsetHigh = over_2[i].OffsetHigh = i * (int)high;
+                    over_1[i].OffsetHigh = over_2[i].OffsetHigh = 0;//i * (int)high;
                 }
                 //main block
                 do
                 {
-                    ReadFileOverlapped((uint)srcSize, blockSize, operationsCount, over_1, buffer, sourceHandle);
-                    WriteFileOverlapped((uint)srcSize, blockSize, operationsCount, over_2, buffer, targetHandle);
-                    curSize -= (int)(blockSize * operationsCount);
+                    ReadFileOverlapped(srcSize, blockSize, operationsCount, over_1, buffer, sourceHandle);
+                    WriteFileOverlapped(srcSize, blockSize, operationsCount, over_2, buffer, targetHandle);
+                    curSize -= (blockSize * operationsCount);
                 } while (curSize > 0);
                 //finish operation
-                SetFilePointer(targetHandle, srcSize, IntPtr.Zero, EMoveMethod.Begin);
+                int szLow = (int)(srcSize%uint.MaxValue), szHigh = (int)(srcSize >> 32);
+                SetFilePointerEx(targetHandle, srcSize, out long foo, EMoveMethod.Begin);
                 SetEndOfFile(targetHandle);
             }
             finally //free pinned memory
@@ -155,9 +181,11 @@ namespace OS_lab1
 
         public unsafe void Copy()
         {
-            string sourcePath, targetPath;
-            if (!GetSourceTargetPaths(out sourcePath, out targetPath, true))
-                return;
+            string sourcePath = "", 
+                targetPath = "";
+
+            //if (!GetSourceTargetPaths(out sourcePath, out targetPath, true))
+            //    return;
             IntPtr sourceHandle = CreateFile(sourcePath, (uint)DesiredAccess.GENERIC_READ,
                 (uint)ShareMode.None, null, (uint)CreationDisposition.OPEN_EXISTING,
                 (uint)FileFlags.FILE_FLAG_NO_BUFFERING | (uint)FileFlags.FILE_FLAG_OVERLAPPED, IntPtr.Zero);
@@ -169,7 +197,7 @@ namespace OS_lab1
             IntPtr targetHandle = CreateFile(targetPath, (uint)DesiredAccess.GENERIC_WRITE,
                 (uint)ShareMode.None, null, (uint)CreationDisposition.CREATE_ALWAYS,
                 (uint)FileFlags.FILE_FLAG_NO_BUFFERING | (uint)FileFlags.FILE_FLAG_OVERLAPPED, IntPtr.Zero);
-            
+
             uint er = GetLastError();
             if (targetHandle == INVALID_HANDLE_VALUE || er != 0)
             {
